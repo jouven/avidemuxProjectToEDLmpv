@@ -6,6 +6,7 @@
 #include <QString>
 #include <QCommandLineParser>
 #include <QSet>
+#include <QMap>
 
 #ifdef DEBUGJOUVEN
 #include <QDebug>
@@ -81,7 +82,8 @@ int main(int argc, char *argv[])
             break;
         }
 
-        QString videoFilenameStr;
+        int_fast64_t videoIndexTmp(0);
+        QMap<int_fast64_t, QString> indexVideoMap;
         QString EDLFileContents("# mpv EDL v0");
         QList<QByteArray> linesTmp(fileContentsTmp.split('\n'));
         for (const QString& fileLine_ite_con : linesTmp)
@@ -93,20 +95,37 @@ int main(int argc, char *argv[])
                 auto firstDoubleQuotePosTmp(fileLine_ite_con.indexOf("\""));
                 auto secondDoubleQuotePosTmp(fileLine_ite_con.indexOf("\"", firstDoubleQuotePosTmp + 1));
                 auto sizeVideoFilenameStr(secondDoubleQuotePosTmp - firstDoubleQuotePosTmp - 1);
-                videoFilenameStr = fileLine_ite_con.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr);
+                QString videoFilenameStr(fileLine_ite_con.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr));
+                indexVideoMap.insert(videoIndexTmp, videoFilenameStr);
+                videoIndexTmp = videoIndexTmp + 1;
             }
 
-            if (not videoFilenameStr.isEmpty() and fileLine_ite_con.startsWith("adm.addSegment"))
+            if (fileLine_ite_con.startsWith("adm.appendVideo"))
+            {
+                //this works for a line like this
+                //adm.appendVideo("/some/path/somevideofile.mkv")
+                auto firstDoubleQuotePosTmp(fileLine_ite_con.indexOf("\""));
+                auto secondDoubleQuotePosTmp(fileLine_ite_con.indexOf("\"", firstDoubleQuotePosTmp + 1));
+                auto sizeVideoFilenameStr(secondDoubleQuotePosTmp - firstDoubleQuotePosTmp - 1);
+                QString videoFilenameStr(fileLine_ite_con.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr));
+                indexVideoMap.insert(videoIndexTmp, videoFilenameStr);
+                videoIndexTmp = videoIndexTmp + 1;
+            }
+
+            if (not indexVideoMap.isEmpty() and fileLine_ite_con.startsWith("adm.addSegment"))
             {
                 //this works for lines like these
                 //adm.addSegment(0, 0, 49162000)
                 //adm.addSegment(0, 67777000, 111301000)
+                auto openParenthesisPosTmp(fileLine_ite_con.indexOf("("));
                 auto firstComaPosTmp(fileLine_ite_con.indexOf(","));
                 auto secondComaPosTmp(fileLine_ite_con.indexOf(",", firstComaPosTmp + 1));
                 auto closeParenthesisPosTmp(fileLine_ite_con.indexOf(")"));
+                auto sizeVideoIndexStr(firstComaPosTmp - openParenthesisPosTmp - 1);
                 auto sizeFirstTimestampStr(secondComaPosTmp - firstComaPosTmp - 2);
                 auto sizeSecondTimestampStr(closeParenthesisPosTmp - secondComaPosTmp - 2);
 
+                QString videoIndexStr(fileLine_ite_con.mid(openParenthesisPosTmp + 1, sizeVideoIndexStr));
                 QString firstTimeStampStr(fileLine_ite_con.mid(firstComaPosTmp + 2, sizeFirstTimestampStr));
                 QString secondTimeStampStr(fileLine_ite_con.mid(secondComaPosTmp + 2, sizeSecondTimestampStr));
 
@@ -116,10 +135,11 @@ int main(int argc, char *argv[])
                 double secondTimeStampFloatTmp(secondTimeStampStr.toDouble());
                 secondTimeStampFloatTmp = secondTimeStampFloatTmp / 1000000;
 
+                //qout << "videoIndexStr.toLongLong() " << videoIndexStr.toLongLong() << endl;
                 QString lineStrTmp;
                 lineStrTmp
                 .append('\n')
-                .append(videoFilenameStr)
+                .append(indexVideoMap.value(videoIndexStr.toLongLong()))
                 .append(',')
                 .append(QString::number(firstTimeStampFloatTmp,'f', 6))
                 .append(',')
@@ -130,7 +150,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (not videoFilenameStr.isEmpty())
+        if (not indexVideoMap.isEmpty())
         {
             //qout << "path " << avidemuxProjectFileFileInfo.dir().path() + "/" + avidemuxProjectFileFileInfo.baseName() + ".edl" << endl;
             QFile edlFile(avidemuxProjectFileFileInfo.dir().path() + "/" + avidemuxProjectFileFileInfo.baseName() + ".edl");
