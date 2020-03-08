@@ -16,7 +16,7 @@ and then:
 Command line usage
 ------------------
 
-    avidemuxProjectToEDLmpv [avidemux prject file path]
+    avidemuxProjectToEDLmpv [avidemux project file path]
     
 File explorer usage
 -------------------
