@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
             //if not adm.loadVideo("somepath"):
             //raise("Cannot load somepath")
             //which is dumb
-            if (fileLine_ite.startsWith("if not adm.loadVideo"))
+            if (fileLine_ite.startsWith("if not adm."))
             {
                 fileLine_ite.remove(0,7);
             }
