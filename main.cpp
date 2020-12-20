@@ -86,48 +86,57 @@ int main(int argc, char *argv[])
         QMap<int_fast64_t, QString> indexVideoMap;
         QString EDLFileContents("# mpv EDL v0");
         QList<QByteArray> linesTmp(fileContentsTmp.split('\n'));
-        for (const QString& fileLine_ite_con : linesTmp)
+        for (QString fileLine_ite : linesTmp)
         {
-            if (fileLine_ite_con.startsWith("adm.loadVideo"))
+            //newer versions of avidemux, seen in 2.7.6, have validation inside the project file
+            //if not adm.loadVideo("somepath"):
+            //raise("Cannot load somepath")
+            //which is dumb
+            if (fileLine_ite.startsWith("if not adm.loadVideo"))
+            {
+                fileLine_ite.remove(0,7);
+            }
+
+            if (fileLine_ite.startsWith("adm.loadVideo"))
             {
                 //this works for a line like this
                 //adm.loadVideo("/some/path/somevideofile.mkv")
-                auto firstDoubleQuotePosTmp(fileLine_ite_con.indexOf("\""));
-                auto secondDoubleQuotePosTmp(fileLine_ite_con.indexOf("\"", firstDoubleQuotePosTmp + 1));
+                auto firstDoubleQuotePosTmp(fileLine_ite.indexOf("\""));
+                auto secondDoubleQuotePosTmp(fileLine_ite.indexOf("\"", firstDoubleQuotePosTmp + 1));
                 auto sizeVideoFilenameStr(secondDoubleQuotePosTmp - firstDoubleQuotePosTmp - 1);
-                QString videoFilenameStr(fileLine_ite_con.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr));
+                QString videoFilenameStr(fileLine_ite.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr));
                 indexVideoMap.insert(videoIndexTmp, videoFilenameStr);
                 videoIndexTmp = videoIndexTmp + 1;
             }
 
-            if (fileLine_ite_con.startsWith("adm.appendVideo"))
+            if (fileLine_ite.startsWith("adm.appendVideo"))
             {
                 //this works for a line like this
                 //adm.appendVideo("/some/path/somevideofile.mkv")
-                auto firstDoubleQuotePosTmp(fileLine_ite_con.indexOf("\""));
-                auto secondDoubleQuotePosTmp(fileLine_ite_con.indexOf("\"", firstDoubleQuotePosTmp + 1));
+                auto firstDoubleQuotePosTmp(fileLine_ite.indexOf("\""));
+                auto secondDoubleQuotePosTmp(fileLine_ite.indexOf("\"", firstDoubleQuotePosTmp + 1));
                 auto sizeVideoFilenameStr(secondDoubleQuotePosTmp - firstDoubleQuotePosTmp - 1);
-                QString videoFilenameStr(fileLine_ite_con.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr));
+                QString videoFilenameStr(fileLine_ite.mid(firstDoubleQuotePosTmp + 1, sizeVideoFilenameStr));
                 indexVideoMap.insert(videoIndexTmp, videoFilenameStr);
                 videoIndexTmp = videoIndexTmp + 1;
             }
 
-            if (not indexVideoMap.isEmpty() and fileLine_ite_con.startsWith("adm.addSegment"))
+            if (not indexVideoMap.isEmpty() and fileLine_ite.startsWith("adm.addSegment"))
             {
                 //this works for lines like these
                 //adm.addSegment(0, 0, 49162000)
                 //adm.addSegment(0, 67777000, 111301000)
-                auto openParenthesisPosTmp(fileLine_ite_con.indexOf("("));
-                auto firstComaPosTmp(fileLine_ite_con.indexOf(","));
-                auto secondComaPosTmp(fileLine_ite_con.indexOf(",", firstComaPosTmp + 1));
-                auto closeParenthesisPosTmp(fileLine_ite_con.indexOf(")"));
+                auto openParenthesisPosTmp(fileLine_ite.indexOf("("));
+                auto firstComaPosTmp(fileLine_ite.indexOf(","));
+                auto secondComaPosTmp(fileLine_ite.indexOf(",", firstComaPosTmp + 1));
+                auto closeParenthesisPosTmp(fileLine_ite.indexOf(")"));
                 auto sizeVideoIndexStr(firstComaPosTmp - openParenthesisPosTmp - 1);
                 auto sizeFirstTimestampStr(secondComaPosTmp - firstComaPosTmp - 2);
                 auto sizeSecondTimestampStr(closeParenthesisPosTmp - secondComaPosTmp - 2);
 
-                QString videoIndexStr(fileLine_ite_con.mid(openParenthesisPosTmp + 1, sizeVideoIndexStr));
-                QString firstTimeStampStr(fileLine_ite_con.mid(firstComaPosTmp + 2, sizeFirstTimestampStr));
-                QString secondTimeStampStr(fileLine_ite_con.mid(secondComaPosTmp + 2, sizeSecondTimestampStr));
+                QString videoIndexStr(fileLine_ite.mid(openParenthesisPosTmp + 1, sizeVideoIndexStr));
+                QString firstTimeStampStr(fileLine_ite.mid(firstComaPosTmp + 2, sizeFirstTimestampStr));
+                QString secondTimeStampStr(fileLine_ite.mid(secondComaPosTmp + 2, sizeSecondTimestampStr));
 
                 double firstTimeStampFloatTmp(firstTimeStampStr.toDouble());
                 firstTimeStampFloatTmp = firstTimeStampFloatTmp / 1000000;
@@ -172,7 +181,7 @@ int main(int argc, char *argv[])
 
     if (not errorStr.isEmpty())
     {
-        qout << "Errors:\n" << errorStr << endl;
+        qout << "Errors:\n" << errorStr << Qt::endl;
         return EXIT_FAILURE;
     }
 }
